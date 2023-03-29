@@ -18,6 +18,9 @@
 #include <utility>
 #include <vector>
 
+// không gian sbsl cung cấp flat_hash_set
+// nghi ngờ đây là một cây BST
+// https://github.com/abseil/abseil-cpp/blob/master/absl/container/flat_hash_set.h
 #include "absl/container/flat_hash_set.h"
 #include "ortools/base/logging.h"
 #include "ortools/base/map_util.h"
@@ -26,12 +29,28 @@ namespace operations_research {
 
 const int64_t RoutingIndexManager::kUnassigned = -1;
 
+//TH3: Xác định số lượng tập điểm di chuyển(num_nodes)
+//     số lượng xe cần tìm hành trình di chuyển(num_vehicles)
+//     với tất cả các xe thứ i ta sẽ hiểu cần tìm hành trình đi từ 
+//     start[i] = depot -> end[i] = depot
+//     -> gọi lại hàm hàm khởi tạo 
+//RoutingIndexManager(num_nodes,num_vehicles,[
+//  {start[1]=depot           ,end[1]=depot},
+//  {start[2]=depot           ,end[2]=depot},
+//  ...
+//  {start[num_vehicles]=depot,end[num_vehicles]=depot}
+//])
 RoutingIndexManager::RoutingIndexManager(int num_nodes, int num_vehicles,
                                          NodeIndex depot)
     : RoutingIndexManager(num_nodes, num_vehicles,
                           std::vector<std::pair<NodeIndex, NodeIndex>>(
                               num_vehicles, {depot, depot})) {}
 
+
+//TH1: Xác định số lượng tập điểm di chuyển(num_nodes),
+//     số lượng xe cần tìm hành trình di chuyển(num_vehicles)
+//     tương ứng với xe thứ i ta có start[i] và end[i] ta cần tìm hành trình
+//     thoả mãn cho xe thứ i đi từ điểm start[i] tới end[i]
 RoutingIndexManager::RoutingIndexManager(int num_nodes, int num_vehicles,
                                          const std::vector<NodeIndex>& starts,
                                          const std::vector<NodeIndex>& ends) {
@@ -44,12 +63,15 @@ RoutingIndexManager::RoutingIndexManager(int num_nodes, int num_vehicles,
   Initialize(num_nodes, num_vehicles, starts_ends);
 }
 
+// tương tự trường hợp 1  nhưng đưa tập diểm {start,end}
+//     là pair  
 RoutingIndexManager::RoutingIndexManager(
     int num_nodes, int num_vehicles,
     const std::vector<std::pair<NodeIndex, NodeIndex>>& starts_ends) {
   Initialize(num_nodes, num_vehicles, starts_ends);
 }
 
+// Hàm khởi tạo chung 
 void RoutingIndexManager::Initialize(
     int num_nodes, int num_vehicles,
     const std::vector<std::pair<NodeIndex, NodeIndex>>& starts_ends) {
@@ -61,26 +83,43 @@ void RoutingIndexManager::Initialize(
   absl::flat_hash_set<NodeIndex> starts;
   absl::flat_hash_set<NodeIndex> ends;
   absl::flat_hash_set<NodeIndex> unique_depots;
+  
   for (const std::pair<NodeIndex, NodeIndex>& start_end : starts_ends) {
     const NodeIndex start = start_end.first;
     const NodeIndex end = start_end.second;
+
+    // ? có thể là kiểm tra start < 0 || start > num_nodes || end < 0 || end < num_nodes
     CHECK_GE(start, 0);
     CHECK_GE(end, 0);
     CHECK_LE(start, num_nodes_);
     CHECK_LE(end, num_nodes_);
+
+    // Thêm vào tập quản lý các điểm bắt đầu và kết thúc giống với Set của C++ thông thường   
     starts.insert(start);
     ends.insert(end);
+
+    // Kiểm tra xem có phải unique depot không khi unique_depot = 1
     unique_depots.insert(start);
     unique_depots.insert(end);
   }
+
   num_unique_depots_ = unique_depots.size();
+
   const int size = num_nodes_ + num_vehicles_ - num_unique_depots_;
 
+
   index_to_node_.resize(size + num_vehicles_);
+  
   node_to_index_.resize(num_nodes_, kUnassigned);
+  
   vehicle_to_start_.resize(num_vehicles_);
+  
   vehicle_to_end_.resize(num_vehicles_);
+  
   int64_t index = 0;
+  
+
+  // mapping struct {int} to int
   for (NodeIndex i = kZeroNode; i < num_nodes_; ++i) {
     if (starts.contains(i) || !ends.contains(i)) {
       index_to_node_[index] = i;
@@ -88,6 +127,13 @@ void RoutingIndexManager::Initialize(
       ++index;
     }
   }
+
+  // Nếu có start trùng nhau thì tạo ra nút start ảo và không ánh xạ lại
+  // -> nếu là node thật thì index_to_node[] và node_to_index[] cùng tồn tại
+  // -> nếu là node out thì chỉ tồn tại index_to_node[]
+  // tương tự như vậy với end
+  // ind
+  
   absl::flat_hash_set<NodeIndex> seen_starts;
   for (int i = 0; i < num_vehicles_; ++i) {
     const NodeIndex start = starts_ends[i].first;

@@ -36,6 +36,10 @@
 
 namespace operations_research {
 
+
+// (chưa chắc chắn) hàm routing model chỉ cho khởi tạo DefaulModel Parameters 
+// đã được khởi tạo từ trước và chỉnh sửa các tham số của nó
+
 RoutingModelParameters DefaultRoutingModelParameters() {
   RoutingModelParameters parameters;
   ConstraintSolverParameters* const solver_parameters =

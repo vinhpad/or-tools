@@ -48,6 +48,11 @@ namespace operations_research {
 ///
 class RoutingIndexManager {
  public:
+  // NodeIndex là một số nguyên vì RoutingNodeIndex được define dưới dạng int
+  // NodeIndex = RoutingNodeIndex = struct {
+  //  int : value ; 
+  // }
+
   typedef RoutingNodeIndex NodeIndex;
   static const int64_t kUnassigned;
 
@@ -85,8 +90,7 @@ class RoutingIndexManager {
     return node_to_index_[node];
   }
   // Same as NodeToIndex but for a given vector of nodes.
-  std::vector<int64_t> NodesToIndices(
-      const std::vector<NodeIndex>& nodes) const;
+  std::vector<int64_t> NodesToIndices(const std::vector<NodeIndex>& nodes) const;
   // Returns the node corresponding to an index. A node may appear more than
   // once if it is used as the start or the end node of multiple vehicles.
   NodeIndex IndexToNode(int64_t index) const {
@@ -112,6 +116,8 @@ class RoutingIndexManager {
       const std::vector<std::pair<NodeIndex, NodeIndex> >& starts_ends);
 
   std::vector<NodeIndex> index_to_node_;
+
+  // (nghi ngờ) giống với map<index,value> ?
   absl::StrongVector<NodeIndex, int64_t> node_to_index_;
   std::vector<int64_t> vehicle_to_start_;
   std::vector<int64_t> vehicle_to_end_;
