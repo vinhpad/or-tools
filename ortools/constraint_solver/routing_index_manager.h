@@ -117,7 +117,7 @@ class RoutingIndexManager {
 
   std::vector<NodeIndex> index_to_node_;
 
-  // (nghi ngờ) giống với map<index,value> ?
+  // (nghi ngờ) giống với map<key,value> ?
   absl::StrongVector<NodeIndex, int64_t> node_to_index_;
   std::vector<int64_t> vehicle_to_start_;
   std::vector<int64_t> vehicle_to_end_;

@@ -45,8 +45,9 @@ RoutingModelParameters DefaultRoutingModelParameters() {
   ConstraintSolverParameters* const solver_parameters =
       parameters.mutable_solver_parameters();
   *solver_parameters = Solver::DefaultSolverParameters();
-  solver_parameters->set_compress_trail(
-      ConstraintSolverParameters::COMPRESS_WITH_ZLIB);
+  
+  solver_parameters->set_compress_trail(ConstraintSolverParameters::COMPRESS_WITH_ZLIB);
+
   solver_parameters->set_skip_locally_optimal_paths(true);
   parameters.set_reduce_vehicle_cost_model(true);
   return parameters;

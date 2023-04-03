@@ -1174,6 +1174,8 @@ RoutingModel::RoutingModel(const RoutingIndexManager& index_manager,
       vehicles_, RegisterTransitCallback(ReturnZero<int64_t, int64_t>));
   // Active caching after initializing vehicle_to_transit_cost_ to avoid
   // uselessly caching ReturnZero.
+
+  // đã kiểm tra nếu đề default thì cache_callbacks sẽ luôn là false 
   cache_callbacks_ = (nodes_ <= parameters.max_callback_cache_size());
 
   VLOG(1) << "Model parameters:\n" << parameters.DebugString();
@@ -1305,7 +1307,12 @@ int RoutingModel::RegisterPositiveUnaryTransitCallback(
   return RegisterUnaryTransitCallback(std::move(callback));
 }
 
+// Hàm này quyết định nếu ma trận khoảng cách n*n > tham số transit quy định thì ta sẽ không lưu 
+// vào một vector mà sẽ để nó ở cache bên kia, mỗi lần lấy ra distance giữa nodeA và nodeB thì sẽ gọi sang bên kia 
+// ngược lại nế u max cache đủ lớn thì mọi trọng số cạnh sẽ được lưu lại vào vector cache<> với công thức
+// dis(a,b) = cache[a*n + b] 
 int RoutingModel::RegisterTransitCallback(TransitCallback2 callback) {
+  // cache_callbacks = false nếu không đả động gì đến việc check max cache
   if (cache_callbacks_) {
     const int size = Size() + vehicles();
     std::vector<int64_t> cache(size * size, 0);
@@ -1317,6 +1324,7 @@ int RoutingModel::RegisterTransitCallback(TransitCallback2 callback) {
     transit_evaluators_.push_back(
         [cache, size](int64_t i, int64_t j) { return cache[i * size + j]; });
   } else {
+    // di chuyển cả con trỏ callback vào bên trong transit_evaluators_ để tiết kiệm bộ nhớ
     transit_evaluators_.push_back(std::move(callback));
   }
   if (transit_evaluators_.size() != unary_transit_evaluators_.size()) {
@@ -2734,12 +2742,12 @@ void RoutingModel::CloseModelWithParameters(
   for (int i = 0; i < vehicles_; ++i) {
     const int64_t start = Start(i);
     const int64_t end = End(i);
-    solver_->AddConstraint(
-        solver_->MakeEquality(vehicle_vars_[start], solver_->MakeIntConst(i)));
-    solver_->AddConstraint(
-        solver_->MakeEquality(vehicle_vars_[end], solver_->MakeIntConst(i)));
-    solver_->AddConstraint(
-        solver_->MakeIsDifferentCstCt(nexts_[start], end, vehicle_active_[i]));
+    solver_->AddConstraint(solver_->MakeEquality(vehicle_vars_[start], solver_->MakeIntConst(i)));
+
+    solver_->AddConstraint(solver_->MakeEquality(vehicle_vars_[end], solver_->MakeIntConst(i)));
+
+    solver_->AddConstraint(solver_->MakeIsDifferentCstCt(nexts_[start], end, vehicle_active_[i]));
+
     if (vehicle_used_when_empty_[i]) {
       vehicle_route_considered_[i]->SetMin(1);
     } else {
@@ -3449,6 +3457,7 @@ const Assignment* RoutingModel::SolveFromAssignmentsWithParameters(
   for (const Assignment* assignment : assignments) {
     if (assignment != nullptr) first_solution_assignments.push_back(assignment);
   }
+  
   local_optimum_reached_ = false;
   objective_lower_bound_ = kint64min;
   if (parameters.use_cp() == BOOL_TRUE) {
